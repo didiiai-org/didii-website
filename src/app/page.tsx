@@ -8,6 +8,7 @@ import { HowItWorks } from "@/components/sections/HowItWorks";
 import { Memory } from "@/components/sections/Memory";
 import { Nav } from "@/components/sections/Nav";
 import { Problem } from "@/components/sections/Problem";
+import { WaitlistOnboarding } from "@/components/waitlist/WaitlistOnboarding";
 
 export default function Home() {
   return (
@@ -35,6 +36,7 @@ export default function Home() {
       </main>
 
       <Footer />
+      <WaitlistOnboarding />
     </div>
   );
 }

@@ -22,7 +22,7 @@ const dmSans = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://didii.ai"),
+  metadataBase: new URL("https://didiiai.com"),
   title: {
     default: "didii — Banking that gets to know you",
     template: "%s · didii",

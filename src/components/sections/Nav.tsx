@@ -2,10 +2,10 @@
 
 import { motion as fm, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
-import { Wordmark } from "@/components/ui/Wordmark";
 import { clsx } from "@/lib/clsx";
 import { nav } from "@/lib/content";
 import { gutter, shell } from "@/lib/layout";
@@ -41,8 +41,8 @@ export function Nav() {
           shell,
         )}
       >
-        <a href="#main" className="text-brand-green" aria-label="didii — home">
-          <Wordmark />
+        <a href="#main" aria-label="didii — home">
+          <Image src="/images/didi-logo.svg" alt="" width={280} height={130} priority className="h-7 w-auto sm:h-8" />
         </a>
 
         <div className="hidden flex-1 items-center justify-center gap-8 lg:flex">
@@ -85,21 +85,23 @@ export function Nav() {
           initial={reduced ? false : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: motion.duration.fast * 2, ease: motion.ease }}
-          className={clsx("mt-2 flex flex-col gap-1 rounded-sheet bg-surface p-3 shadow-sheet lg:hidden", shell)}
+          className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 lg:hidden"
         >
-          {nav.links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="rounded-button px-4 py-3 text-body text-ink hover:bg-green-50"
-            >
-              {link.label}
-            </a>
-          ))}
-          <Button href={nav.cta.href} variant="onLight" withArrow={false} className="mt-1 justify-center rounded-chip">
-            {nav.cta.label}
-          </Button>
+          <div className={clsx("flex flex-col gap-1 rounded-sheet bg-surface p-3 shadow-sheet", shell)}>
+            {nav.links.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="rounded-button px-4 py-3 text-body text-ink hover:bg-green-50"
+              >
+                {link.label}
+              </a>
+            ))}
+            <Button href={nav.cta.href} variant="onLight" withArrow={false} className="mt-1 justify-center rounded-chip">
+              {nav.cta.label}
+            </Button>
+          </div>
         </fm.div>
       ) : null}
     </div>

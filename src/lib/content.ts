@@ -208,7 +208,7 @@ export const faq = {
     },
     {
       q: "Does didii connect all my banking apps?",
-      a: "No. didii is a conversational financial platform, not a bank. Banking and payment services are provided through our financial partners.",
+      a: "No. didii does not need access to your existing banking apps. You use didii's wallet and supported financial services directly within the app.",
     },
     {
       q: "Can didii move money without asking me?",
@@ -227,7 +227,12 @@ export const faq = {
 
 export const finalCta = {
   title: "Just tell didii",
-  body: "Join more than 2,900 people registered before launch and be among the first to experience banking that gets to know you",
+  /** Body is split so the count can be swapped for the live figure from
+   * `/api/count` without touching the surrounding copy. `bodyFallback` is
+   * what renders before that fetch resolves (and if it fails). */
+  bodyPrefix: "Join more than ",
+  bodyFallback: 2900,
+  bodySuffix: " people registered before launch and be among the first to experience banking that gets to know you",
   cta: { label: "Join the waitlist", href: "#waitlist" },
   note: "Pre-launch in Nigeria. We'll let you know when early access opens",
   avatars: [

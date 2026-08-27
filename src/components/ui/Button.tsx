@@ -2,7 +2,7 @@
 
 import { motion as fm, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import type { ReactNode } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
 
 import { clsx } from "@/lib/clsx";
 import { motion } from "@/lib/tokens";
@@ -30,6 +30,7 @@ export function Button({
   className,
   withArrow = true,
   icon,
+  onClick,
 }: {
   children: ReactNode;
   href?: string;
@@ -37,12 +38,24 @@ export function Button({
   className?: string;
   withArrow?: boolean;
   icon?: ReactNode;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   const reduced = useReducedMotion();
+
+  const handleClick: MouseEventHandler<HTMLAnchorElement> = (event) => {
+    onClick?.(event);
+    if (event.defaultPrevented) return;
+
+    if (href === "#waitlist") {
+      event.preventDefault();
+      window.dispatchEvent(new CustomEvent("didii:open-waitlist"));
+    }
+  };
 
   return (
     <fm.a
       href={href}
+      onClick={handleClick}
       className={clsx(
         "group inline-flex min-h-11 items-center gap-3 rounded-button px-6 py-3.5",
         "text-body font-bold whitespace-nowrap transition-colors duration-200",

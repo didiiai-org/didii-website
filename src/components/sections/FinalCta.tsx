@@ -2,6 +2,7 @@
 
 import { motion as fm, useReducedMotion } from "framer-motion";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +21,20 @@ const seats = [
 
 export function FinalCta() {
   const reduced = useReducedMotion();
+  const [count, setCount] = useState(finalCta.bodyFallback);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/count")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && typeof data?.count === "number") setCount(data.count);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section id="waitlist" className={clsx(gutter, "bg-surface py-16 sm:py-20")}>
@@ -35,7 +50,11 @@ export function FinalCta() {
           {finalCta.title}
         </h2>
 
-        <p className="mt-5 max-w-[58ch] text-[1.0625rem] leading-relaxed text-green-100/65">{finalCta.body}</p>
+        <p className="mt-5 max-w-[58ch] text-[1.0625rem] leading-relaxed text-green-100/65">
+          {finalCta.bodyPrefix}
+          {count.toLocaleString()}
+          {finalCta.bodySuffix}
+        </p>
 
         <Button href={finalCta.cta.href} variant="gold" className="mt-9 px-7 py-4 text-[1.0625rem]">
           {finalCta.cta.label}
