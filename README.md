@@ -14,72 +14,80 @@ npm run start   # serve the build
 
 ---
 
-## The token contract
+## The product
 
-The whole point of the token spec is that **no screen uses a raw value**. That
-rule is enforced here the same way it is in Flutter:
+**didii is conversational banking for Nigeria** — you tell it what you need in
+plain English or Pidgin, it fills in the details from what it already knows
+about you, and it waits for an explicit **Yes** (plus a 4-digit transaction
+PIN) before any money moves. It is pre-launch; this repo is the waitlist
+landing page, not the app itself.
 
-- `src/app/globals.css` → the `@theme` block. Every colour, type step, radius,
-  shadow and motion curve is a named CSS variable. Tailwind generates its
-  utilities *from* these, so `bg-brand-green` and `rounded-card` resolve to the
-  token, not to a hex someone typed.
-- `src/lib/tokens.ts` → the JavaScript mirror. Only what JS actually needs:
-  motion durations, easing curves, the reveal viewport config, and the money
-  status map. A token added on one side without a counterpart on the other is a
-  review fail — same rule as the Figma ↔ Flutter contract.
+didii is not a licensed bank — it is a conversational layer over banking and
+payment services provided through financial partners, and it does not connect
+to or read your existing banking apps (see the FAQ answers in
+`src/lib/content.ts`).
 
-Rename a token in `globals.css` and it changes everywhere. There is one
-deliberate exception: a handful of muted greens in section copy are written as
-arbitrary values (`text-[#5f7768]`) because they are mid-ramp steps the spec
-still marks ⚠️. **Promote them to real tokens once
-`didii-brand-guidelines.pdf` is extracted** — search the codebase for `text-[#`
-to find every one.
+Supported money jobs, all inside one chat (`content.ts` → `features`):
 
-### Still open (spec §7)
+- **Send money** to Nigerian bank accounts
+- **Pay bills** — electricity and TV, currently
+- **Cash out supported crypto** to naira
+- **Buy airtime and data** for yourself or a saved contact
+- **Check your wallet** — balance, recent activity, bill spend
 
-1. Exact green ramp, neutral greys and status hues — the ramp here is derived
-   from `#0C2B1A` and needs confirming against the brand PDF.
-2. Shadow values — `--shadow-card` / `--shadow-sheet` / `--shadow-bubble` are
-   soft and low as the spec asks, but the numbers are a proposal.
-3. Dark mode — out of MVP, so not implemented. The tokens are structured to take
-   a second `@theme` block when it lands.
-4. Icon set — currently **lucide-react**. Swap it if design wants custom glyphs;
-   icons are referenced by string key in `src/lib/content.ts` and mapped in each
-   section, so a swap touches the map, not the markup.
+The product's whole pitch is memory with consent: the first time you pay a
+biller, didii asks for the meter number and remembers it; every time after
+that it skips straight to "here's what I'm about to do — confirm?". The
+decline button is never visually demoted below approve — see [The
+hero](#the-hero) for why that matters enough to be load-bearing UI, not just
+copy.
 
----
+## User journey
 
-## The hero
+The page is one long argument, told in the same order `page.tsx` renders the
+sections, and every section's copy lives in `src/lib/content.ts`:
 
-Two details worth knowing before you touch it:
+1. **Hero** — the pitch and a live demo. A voice note ("Send 5k to mama")
+   plays into a confirmation card with an approve/decline row, unprompted, so
+   the core loop is understood before any copy is read.
+2. **Problem** (`problem`) — names the actual pain: not that banking is slow,
+   but that it's *repetitive* — the same recipient, the same bill, re-entered
+   every time.
+3. **Memory** (`memory`) — the answer to the problem, shown as two chat
+   threads: "first electricity payment" (didii asks for the meter number) vs.
+   "the next month" (it doesn't ask again). Setup happens once; the approval
+   decision still happens every time.
+4. **How it works** (`howItWorks`) — the three-step mental model, generalised
+   from the hero demo: **tell didii → review what's ready → approve with Yes
+   + PIN**. Each step renders a different real UI (chat thread, itemised
+   receipt, PIN pad).
+5. **Features** (`features`) — the money jobs above, once the reader already
+   trusts the confirm-before-send pattern.
+6. **Back to life** (`backToLife`) — the emotional payoff: the point of the
+   product isn't more time spent in didii, it's less banking admin bleeding
+   into the rest of your day.
+7. **FAQ** (`faq`) — objection handling: is this a bank, does it read my
+   other apps, can it move money without me, is it live yet.
+8. **Final CTA** (`finalCta`) — the ask, with live-feeling social proof (a
+   waitlist count).
+9. **Footer** — sitemap plus the tagline as a closing line.
 
-- **The wash is a decorative layer, not a wrapper.** `page.tsx` paints
-  `hero-wash` as an absolutely-positioned div behind the nav and hero. Wrapping
-  them instead would need `overflow-hidden` to clip the cutout, and a clipping
-  ancestor traps `position: sticky` — the nav would stop following the page once
-  the hero scrolled away. The wash ends on pure white, so its height can
-  overshoot harmlessly; the clipping lives on the hero's right column only.
-- **The subject is a transparent cutout**, not a framed photo. It is anchored to
-  the section floor and cropped by it. A JPEG here will paint an opaque box over
-  the gradient — keep the alpha channel.
+Every CTA on the page — nav, hero, final CTA — dispatches the same
+`didii:open-waitlist` window event (`Button.tsx`) rather than linking out, so
+they all land the visitor in one place:
 
-The hero conversation (`components/chat/HeroThread.tsx`) plays once on entry.
-Its approve/decline row is built from real `<button>` elements: a mock-up of a
-money control should still be keyboard-reachable and announced properly, even
-though nothing submits. The decline is given the same visual weight as the
-approve — that is the product's whole promise, so the landing page should not
-quietly de-emphasise it.
+**The waitlist flow** (`components/waitlist/WaitlistOnboarding.tsx`), a
+4-step modal:
 
-## Alignment
+1. Persona — personal or business use
+2. Contact — name, phone, email
+3. Use cases — which of the six chips (bills, transfers, crypto cash-out,
+   data & airtime, photo input, voice input) apply
+4. Confirmation — a queue position and a copy-to-share link
 
-`src/lib/layout.ts` exports one `gutter` + `shell` pair, used by the nav and
-every section. That is why the wordmark, the hero headline and every card below
-share a left rule. Change the gutter there and the whole page moves together.
-
-The gutter is a percentage on the *outer* element and the width cap sits on the
-*inner* one. Putting both on one element (`max-w-… px-[5%]`) drifts out of
-alignment as the viewport grows, because percentage padding resolves against the
-parent's width rather than the capped element's.
+Cloudflare Turnstile gates submission. A completed entry is cached in
+`localStorage` (`didii:waitlist`) so a returning visitor who reopens the modal
+lands straight on step 4 instead of re-submitting.
 
 ## Structure
 
@@ -182,16 +190,3 @@ npm run shots -- http://localhost:3000 ./shots
 Captures full-page desktop, wide, mobile and reduced-motion screenshots, and
 reports any console errors. Set `CHROMIUM_PATH` if Playwright's bundled browser
 does not match your machine's.
-
----
-
-## Before launch
-
-- [ ] Replace every image in `public/images/`
-- [ ] Point `#waitlist` at a real form (all CTAs share `finalCta.cta.href`)
-- [ ] Confirm the green/neutral/status ramps against the brand PDF and promote
-      the remaining `text-[#…]` arbitrary values to tokens
-- [ ] Add an OG image (`opengraph-image.tsx` in `src/app/`)
-- [ ] Set the real domain in `metadata.metadataBase`
-- [ ] Fill in the `#privacy`, `#terms`, `#contact` and `#about` destinations
-- [ ] Run the palette against the contrast bar in `02-accessibility.md`
