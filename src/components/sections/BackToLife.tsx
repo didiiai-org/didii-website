@@ -54,7 +54,9 @@ export function BackToLife() {
               className={clsx("relative", placement[i])}
             >
               <Drift distance={7} duration={11 + i} delay={i * 0.7}>
-                <div className="relative aspect-4/3 overflow-hidden rounded-card">
+                {/* Frame follows the source ratio — the shipped shots are 16:9,
+                    and a 4:3 frame cropped a quarter of each one off the sides. */}
+                <div className="relative aspect-video overflow-hidden rounded-card">
                   <Image
                     src={photo.src}
                     alt={photo.alt}

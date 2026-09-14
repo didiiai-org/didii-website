@@ -89,7 +89,11 @@ Cloudflare Turnstile gates submission. A completed entry is cached in
 `localStorage` (`didii:waitlist`) so a returning visitor who reopens the modal
 lands straight on step 4 instead of re-submitting.
 
-## Structure
+## File structure
+
+One file per concern: page order lives in `page.tsx`, section order mirrors
+the [user journey](#user-journey) above, and every section is one component
+in `components/sections/` reading its copy from `content.ts`.
 
 ```
 src/
