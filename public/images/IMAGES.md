@@ -5,8 +5,8 @@
 | File                                | State                                                                 |
 | ----------------------------------- | --------------------------------------------------------------------- |
 | `hero-cutout.png`                   | ✅ real — trimmed to content bounds (see below)                        |
-| `back-to-dinner / work / life / people.png` | ⚠️ real but **250×200** — too small, see "Resolution" below    |
-| `avatar-1..3.jpg`                   | ❌ still generated placeholders                                        |
+| `back-to-dinner / work / life / people.jpg` | ✅ real — 1376×768, 16:9 (see "Resolution" below)              |
+| `avatar-1..3.png`                   | ❌ still generated placeholders                                        |
 
 `npm run placeholders` regenerates the placeholder set. It will **overwrite the
 real images**, so only run it on a clean checkout.
@@ -40,26 +40,29 @@ the section floor, so the bottom of the image is the bottom of the section.
 Keep it PNG or WebP: a JPEG has no alpha and will paint an opaque box over the
 gradient wash.
 
-## Resolution
+## Resolution and ratio
 
-The four `back-to-*.png` files are **250×200**. They render about 220 CSS px
-wide, which is 440px on a 2× display — so they are currently upscaled roughly 2×
-and will look soft on any modern screen. Re-export them at **800×600 or larger**.
+The four `back-to-*.jpg` files are **1376×768** — comfortably above the ~440px
+they need on a 2× display. `next/image` converts to WebP/AVIF and generates
+responsive sizes on the way out, so a large, clean source is what you want to
+commit. It cannot invent detail that is not in the file.
 
-`next/image` converts to WebP/AVIF and generates responsive sizes on the way
-out, so a large, clean source is what you want to commit. It cannot invent
-detail that is not in the file.
+They are **16:9**, not the 4:3 this section was first built for, and the frame in
+`BackToLife.tsx` follows them (`aspect-video`). The frame and the source must
+agree: the images render `object-cover`, so a frame narrower than the source
+silently crops the sides — a 4:3 frame took about a quarter off each of these.
+If a replacement shot is a different shape, change the frame with it.
 
 ## Shot list
 
 | File                 | Where                     | Ratio        | Shot                                                                    |
 | -------------------- | ------------------------- | ------------ | ----------------------------------------------------------------------- |
 | `hero-cutout.png`    | Hero subject              | ~3:4         | Transparent cutout, no backdrop, no margin. Figure crops at the section floor. |
-| `back-to-dinner.png` | "Back to life", top left  | 4:3          | Woman at her dining table, phone face-down beside the plate             |
-| `back-to-work.png`   | "Back to life", top right | 4:3          | Man at a laptop in a home office                                        |
-| `back-to-life.png`   | "Back to life", mid left  | 4:3          | Friends laughing at an outdoor table                                    |
-| `back-to-people.png` | "Back to life", mid right | 4:3          | Shop owner serving a customer at her counter                            |
-| `avatar-1..3.jpg`    | Waitlist arc              | 1:1          | Head-and-shoulders portraits, plain backdrops, ≥400×400                 |
+| `back-to-dinner.jpg` | "Back to life", top left  | 16:9         | Woman at her dining table, phone face-down beside the plate             |
+| `back-to-work.jpg`   | "Back to life", top right | 16:9         | Man at a laptop in a home office                                        |
+| `back-to-life.jpg`   | "Back to life", mid left  | 16:9         | Friends laughing at an outdoor table                                    |
+| `back-to-people.jpg` | "Back to life", mid right | 16:9         | Shop owner serving a customer at her counter                            |
+| `avatar-1..3.png`    | Waitlist arc              | 1:1          | Head-and-shoulders portraits, plain backdrops, ≥400×400                 |
 
 Alt text lives in `src/lib/content.ts`, not here — update it there if a shot
 changes meaningfully. The three avatars are decorative and carry empty alt on

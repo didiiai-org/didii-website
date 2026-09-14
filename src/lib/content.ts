@@ -188,10 +188,10 @@ export const backToLife = {
   body: "The transfer gets handled. The bill details stop living in your head. You close the app and get back to why the money needed moving in the first place",
   footnote: "The point is not more time with didii. It is more life on the other side.",
   photos: [
-    { label: "Back to dinner.", src: "/images/back-to-dinner.png", alt: "A woman at her dining table, phone face-down beside her plate" },
-    { label: "Back to work.", src: "/images/back-to-work.png", alt: "A man working at his laptop in a home office" },
-    { label: "Back to life.", src: "/images/back-to-life.png", alt: "Friends laughing together at an outdoor table" },
-    { label: "Back to People.", src: "/images/back-to-people.png", alt: "A shop owner serving a customer at her counter" },
+    { label: "Back to dinner.", src: "/images/back-to-dinner.jpg", alt: "A woman at her dining table, phone face-down beside her plate" },
+    { label: "Back to work.", src: "/images/back-to-work.jpg", alt: "A man working at his laptop in a home office" },
+    { label: "Back to life.", src: "/images/back-to-life.jpg", alt: "Friends laughing together at an outdoor table" },
+    { label: "Back to People.", src: "/images/back-to-people.jpg", alt: "A shop owner serving a customer at her counter" },
   ] as const,
 };
 
@@ -216,11 +216,11 @@ export const faq = {
     },
     {
       q: "What does didii remember?",
-      a: "No. didii will never move money without your confirmation. Before any money-moving action, didii shows you exactly what is about to happen. You confirm it and authorise the transaction with your Transaction PIN.",
+      a: "didii remembers relevant information and conversation context that helps make your experience more personalised and means you don’t have to repeat yourself unnecessarily.",
     },
     {
       q: "Is didii live?",
-      a: "No. didii will never move money without your confirmation. Before any money-moving action, didii shows you exactly what is about to happen. You confirm it and authorise the transaction with your Transaction PIN.",
+      a: "didii is currently being built and is not yet generally available to the public. We’re working towards launch.",
     },
   ] as const,
 };

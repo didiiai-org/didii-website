@@ -6,7 +6,7 @@ import { getBrevoListCount } from "@/lib/brevo";
  * marketing copy already shipped with (`finalCta.bodyFallback` in
  * `content.ts`), so wiring up the live Brevo count doesn't cause a visible
  * drop the moment this ships. Every Brevo subscriber adds to this floor. */
-const BASELINE = 2900;
+const BASELINE = 800;
 
 export async function GET() {
   const real = await getBrevoListCount();

@@ -78,7 +78,12 @@ def build(name: str, size: tuple[int, int], top: str, bottom: str, blob: str, sh
     img = soft_shapes(img, to_rgb(blob), shapes)
     img = vignette(img, 0.30)
     img = grain(img)
-    img.save(OUT / name, "JPEG", quality=86, optimize=True, progressive=True)
+    # Format follows the extension — the name has to match what the site asks
+    # for, and a .png holding JPEG bytes is the kind of thing that bites later.
+    if (OUT / name).suffix.lower() == ".png":
+        img.save(OUT / name, "PNG", optimize=True)
+    else:
+        img.save(OUT / name, "JPEG", quality=86, optimize=True, progressive=True)
     print(f"  {name}  {size[0]}×{size[1]}")
 
 
@@ -145,15 +150,16 @@ def hero_cutout(name: str = "hero-cutout.png", size: tuple[int, int] = (640, 840
 # section floor. Not a framed photo: the figure bleeds off the bottom.
 hero_cutout()
 
-# The four "back to …" moments — warm interiors, low light.
-build("back-to-dinner.jpg", (960, 720), "#f0d7ae", "#6d4520", "#c98f4c")
-build("back-to-work.jpg", (960, 720), "#dfe6ea", "#4a5b63", "#93a7b0")
-build("back-to-life.jpg", (960, 720), "#f5dcae", "#7a4a22", "#d4a05a")
-build("back-to-people.jpg", (960, 720), "#e8d7c0", "#5f4a33", "#bd9a6e")
+# The four "back to …" moments — warm interiors, low light. 16:9 to match the
+# frame in `BackToLife.tsx`; a 4:3 placeholder here would be cropped on the sides.
+build("back-to-dinner.jpg", (1376, 768), "#f0d7ae", "#6d4520", "#c98f4c")
+build("back-to-work.jpg", (1376, 768), "#dfe6ea", "#4a5b63", "#93a7b0")
+build("back-to-life.jpg", (1376, 768), "#f5dcae", "#7a4a22", "#d4a05a")
+build("back-to-people.jpg", (1376, 768), "#e8d7c0", "#5f4a33", "#bd9a6e")
 
-# Waitlist avatars.
-build("avatar-1.jpg", (400, 400), "#e6dcc4", "#8d7d5e", "#c9bb99", 3)
-build("avatar-2.jpg", (400, 400), "#cfe0d3", "#4f6a58", "#9dbaa6", 3)
-build("avatar-3.jpg", (400, 400), "#dcd8ee", "#5d5a7a", "#a8a3c6", 3)
+# Waitlist avatars. `.png` — that is what `finalCta.avatars` asks for.
+build("avatar-1.png", (400, 400), "#e6dcc4", "#8d7d5e", "#c9bb99", 3)
+build("avatar-2.png", (400, 400), "#cfe0d3", "#4f6a58", "#9dbaa6", 3)
+build("avatar-3.png", (400, 400), "#dcd8ee", "#5d5a7a", "#a8a3c6", 3)
 
 print("done")
