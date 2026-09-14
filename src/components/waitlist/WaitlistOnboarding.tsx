@@ -14,6 +14,7 @@ declare global {
     turnstile?: {
       render: (container: HTMLElement, options: Record<string, unknown>) => string;
       remove: (widgetId: string) => void;
+      reset: (widgetId: string) => void;
     };
   }
 }
@@ -82,6 +83,7 @@ export function WaitlistOnboarding() {
   const [alreadyJoined, setAlreadyJoined] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileReady, setTurnstileReady] = useState(false);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const turnstileWidgetId = useRef<string | null>(null);
 
@@ -137,18 +139,33 @@ export function WaitlistOnboarding() {
   }, [open]);
 
   useEffect(() => {
-    if (step !== 3) return;
+    /* `open` is a dep so closing the modal on step 3 tears the widget down —
+       otherwise its iframe is ripped out of the DOM mid-challenge. */
+    if (!open || step !== 3) return;
     const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-    if (!turnstileReady || !siteKey) return;
-    if (!window.turnstile || !turnstileContainerRef.current) return;
+    if (!siteKey) {
+      console.error("turnstile: NEXT_PUBLIC_TURNSTILE_SITE_KEY is not set (restart `next dev` after editing .env)");
+      return;
+    }
+    if (!turnstileReady || !window.turnstile || !turnstileContainerRef.current) return;
 
+    setTurnstileError(null);
     const widgetId = window.turnstile.render(turnstileContainerRef.current, {
       sitekey: siteKey,
       action: "waitlist",
       theme: "light",
-      callback: (token: string) => setTurnstileToken(token),
+      callback: (token: string) => {
+        setTurnstileToken(token);
+        setTurnstileError(null);
+      },
       "expired-callback": () => setTurnstileToken(null),
-      "error-callback": () => setTurnstileToken(null),
+      "error-callback": (code: string) => {
+        /* 1102xx = hostname not in the widget's allowed domains,
+           4000x0 = invalid/disabled sitekey. See Cloudflare's error-code docs. */
+        console.warn("turnstile: error-callback", code);
+        setTurnstileToken(null);
+        setTurnstileError(code);
+      },
     });
     turnstileWidgetId.current = widgetId;
 
@@ -158,7 +175,7 @@ export function WaitlistOnboarding() {
         turnstileWidgetId.current = null;
       }
     };
-  }, [step, turnstileReady]);
+  }, [open, step, turnstileReady]);
 
   const dots = step === 2 || step === 3 ? dotMap[step] : null;
 
@@ -200,6 +217,12 @@ export function WaitlistOnboarding() {
       setStep(4);
     } catch {
       setSubmitError("Couldn't join the waitlist. Please try again.");
+      /* Tokens are single-use — the server's siteverify call already spent
+         this one, so a retry with it would fail with timeout-or-duplicate. */
+      setTurnstileToken(null);
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.reset(turnstileWidgetId.current);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -484,6 +507,12 @@ export function WaitlistOnboarding() {
                     </div>
 
                     <div ref={turnstileContainerRef} className="mt-4 flex justify-center sm:mt-5" />
+
+                    {turnstileError ? (
+                      <p className="mt-2 text-center text-sm text-red-600">
+                        Verification couldn&apos;t load (error {turnstileError}). Refresh and try again.
+                      </p>
+                    ) : null}
 
                     {submitError ? (
                       <p className="mt-3 text-sm text-red-600">{submitError}</p>
