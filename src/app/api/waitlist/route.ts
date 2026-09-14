@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { addToBrevoList } from "@/lib/brevo";
+import { addToBrevoList, getBrevoListCount, isOnBrevoList, WAITLIST_BASELINE } from "@/lib/brevo";
 import { sendEmail } from "@/lib/email";
 import { appendWaitlistRow } from "@/lib/googleSheets";
 import { ipFromReq, rateLimitPair } from "@/lib/ratelimit";
-import { verifyTurnstile } from "@/lib/turnstile";
 import { buildWaitlistConfirmationEmail } from "@/lib/waitlistEmail";
 
 const MAX_BODY_BYTES = 8 * 1024;
@@ -24,8 +23,8 @@ export async function POST(request: NextRequest) {
 
   const ip = ipFromReq(request);
 
-  /* Rate limit first — cheapest reject path, saves a Turnstile round-trip
-     when an IP is already over budget. */
+  /* Rate limit first — cheapest reject path. This is the only abuse control
+     on the endpoint, and it fails open when Upstash isn't configured. */
   const rl = await rateLimitPair(
     "rl:waitlist",
     ip,
@@ -42,18 +41,21 @@ export async function POST(request: NextRequest) {
 
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
-  const email = typeof body?.email === "string" ? body.email.trim() : "";
-  const turnstileToken = typeof body?.turnstileToken === "string" ? body.turnstileToken : null;
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
 
   if (!name || !phone || !emailLooksValid(email)) {
     return NextResponse.json({ error: "Invalid waitlist submission." }, { status: 400 });
   }
 
-  const verify = await verifyTurnstile(turnstileToken, ip, "waitlist");
-  if (!verify.success) {
-    console.warn("waitlist: turnstile rejected", verify.errorCodes);
-    return NextResponse.json({ error: "Verification failed. Refresh and try again." }, { status: 403 });
+  /* One signup per email. Brevo is the only store we can query (Sheets is
+     append-only via Apps Script). If the lookup fails we let the signup
+     through rather than lose a lead. The count is read before the add so the
+     new signup is counted exactly once, whenever Brevo updates its stats. */
+  const [existing, countBefore] = await Promise.all([isOnBrevoList(email), getBrevoListCount()]);
+  if (existing) {
+    return NextResponse.json({ ok: true, alreadyJoined: true, position: null });
   }
+  if (existing === null) console.warn("waitlist: Brevo lookup unavailable, duplicate check skipped");
 
   /* All three run in parallel; none blocks the response, and none can take
      the whole submission down — a Sheets, Brevo, or Resend outage still
@@ -78,7 +80,9 @@ export async function POST(request: NextRequest) {
     }
   });
 
-  return NextResponse.json({ ok: true });
+  /* Same figure `/api/count` shows: baseline + Brevo subscribers. */
+  const position = countBefore === null ? null : WAITLIST_BASELINE + countBefore + 1;
+  return NextResponse.json({ ok: true, alreadyJoined: false, position });
 }
 
 function sendConfirmationEmail(name: string, email: string) {

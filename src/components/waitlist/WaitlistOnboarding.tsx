@@ -2,35 +2,28 @@
 
 import { AnimatePresence, motion as fm, useReducedMotion } from "framer-motion";
 import { ArrowLeft, BriefcaseBusiness, Copy, User } from "lucide-react";
-import Script from "next/script";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Wordmark } from "@/components/ui/Wordmark";
 import { clsx } from "@/lib/clsx";
 import { motion } from "@/lib/tokens";
 
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (container: HTMLElement, options: Record<string, unknown>) => string;
-      remove: (widgetId: string) => void;
-      reset: (widgetId: string) => void;
-    };
-  }
-}
-
 type Persona = "personal" | "business";
 
-type StoredWaitlistEntry = { name: string; queuePosition: number };
+type StoredWaitlistEntry = { name: string; queuePosition: number | null };
 
-const WAITLIST_STORAGE_KEY = "didii:waitlist";
+/* v2: v1 entries held a random client-side position, so they're ignored. */
+const WAITLIST_STORAGE_KEY = "didii:waitlist:v2";
 
 function readStoredWaitlist(): StoredWaitlistEntry | null {
   try {
     const raw = window.localStorage.getItem(WAITLIST_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (typeof parsed?.name === "string" && typeof parsed?.queuePosition === "number") {
+    if (
+      typeof parsed?.name === "string" &&
+      (typeof parsed?.queuePosition === "number" || parsed?.queuePosition === null)
+    ) {
       return parsed;
     }
     return null;
@@ -57,11 +50,6 @@ const emailLooksValid = (value: string) => {
 const phoneLooksValid = (value: string) =>
   value.replace(/\D/g, "").length >= 10;
 
-const secureQueuePosition = () => {
-  const randomValue = crypto.getRandomValues(new Uint32Array(1))[0] % 500;
-  return 2700 + randomValue;
-};
-
 const dotMap = {
   2: ["active", "muted", "muted"],
   3: ["done", "active", "muted"],
@@ -77,15 +65,10 @@ export function WaitlistOnboarding() {
   const [email, setEmail] = useState("");
   const [useCases, setUseCases] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const [queuePosition, setQueuePosition] = useState(secureQueuePosition());
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [alreadyJoined, setAlreadyJoined] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [turnstileReady, setTurnstileReady] = useState(false);
-  const [turnstileError, setTurnstileError] = useState<string | null>(null);
-  const turnstileContainerRef = useRef<HTMLDivElement>(null);
-  const turnstileWidgetId = useRef<string | null>(null);
 
   useEffect(() => {
     const openFlow = () => {
@@ -99,7 +82,6 @@ export function WaitlistOnboarding() {
       setCopied(false);
       setSubmitting(false);
       setSubmitError(null);
-      setTurnstileToken(null);
 
       if (stored) {
         setAlreadyJoined(true);
@@ -109,7 +91,7 @@ export function WaitlistOnboarding() {
       } else {
         setAlreadyJoined(false);
         setName("");
-        setQueuePosition(secureQueuePosition());
+        setQueuePosition(null);
         setStep(1);
       }
     };
@@ -138,49 +120,10 @@ export function WaitlistOnboarding() {
     };
   }, [open]);
 
-  useEffect(() => {
-    /* `open` is a dep so closing the modal on step 3 tears the widget down —
-       otherwise its iframe is ripped out of the DOM mid-challenge. */
-    if (!open || step !== 3) return;
-    const siteKey = process.env.TURNSTILE_SITE_KEY;
-    if (!siteKey) {
-      console.error("turnstile: TURNSTILE_SITE_KEY is not set (restart `next dev` after editing .env)");
-      return; 
-    }
-    if (!turnstileReady || !window.turnstile || !turnstileContainerRef.current) return;
-
-    setTurnstileError(null);
-    const widgetId = window.turnstile.render(turnstileContainerRef.current, {
-      sitekey: siteKey,
-      action: "waitlist",
-      theme: "light",
-      callback: (token: string) => {
-        setTurnstileToken(token);
-        setTurnstileError(null);
-      },
-      "expired-callback": () => setTurnstileToken(null),
-      "error-callback": (code: string) => {
-        /* 1102xx = hostname not in the widget's allowed domains,
-           4000x0 = invalid/disabled sitekey. See Cloudflare's error-code docs. */
-        console.warn("turnstile: error-callback", code);
-        setTurnstileToken(null);
-        setTurnstileError(code);
-      },
-    });
-    turnstileWidgetId.current = widgetId;
-
-    return () => {
-      if (turnstileWidgetId.current && window.turnstile) {
-        window.turnstile.remove(turnstileWidgetId.current);
-        turnstileWidgetId.current = null;
-      }
-    };
-  }, [open, step, turnstileReady]);
-
   const dots = step === 2 || step === 3 ? dotMap[step] : null;
 
   const canContinueStep2 = name.trim().length > 1;
-  const canContinueStep3 = phoneLooksValid(phone) && emailLooksValid(email) && Boolean(turnstileToken);
+  const canContinueStep3 = phoneLooksValid(phone) && emailLooksValid(email);
 
   const whatsappHref = useMemo(() => {
     const message = encodeURIComponent(
@@ -200,29 +143,28 @@ export function WaitlistOnboarding() {
           name,
           phone: `+234${phone.replace(/\D/g, "")}`,
           email,
-          turnstileToken,
         }),
       });
-      if (!response.ok) throw new Error("Request failed");
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) throw new Error("Request failed");
+
+      /* The server owns the position: baseline + Brevo count for a new
+         signup, null for an email that's already on the list. */
+      const position = typeof data.position === "number" ? data.position : null;
 
       try {
-        const entry: StoredWaitlistEntry = { name, queuePosition };
+        const entry: StoredWaitlistEntry = { name, queuePosition: position };
         window.localStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(entry));
       } catch {
         // localStorage unavailable (private mode, etc.) — not fatal, just
         // means "already on the waitlist" won't be detected next visit.
       }
 
-      setAlreadyJoined(false);
+      setQueuePosition(position);
+      setAlreadyJoined(data.alreadyJoined === true);
       setStep(4);
     } catch {
       setSubmitError("Couldn't join the waitlist. Please try again.");
-      /* Tokens are single-use — the server's siteverify call already spent
-         this one, so a retry with it would fail with timeout-or-duplicate. */
-      setTurnstileToken(null);
-      if (turnstileWidgetId.current && window.turnstile) {
-        window.turnstile.reset(turnstileWidgetId.current);
-      }
     } finally {
       setSubmitting(false);
     }
@@ -255,14 +197,6 @@ export function WaitlistOnboarding() {
 
   return (
     <>
-      {open ? (
-        <Script
-          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-          strategy="lazyOnload"
-          onLoad={() => setTurnstileReady(true)}
-        />
-      ) : null}
-
       <AnimatePresence>
         {open ? (
           <fm.section
@@ -506,14 +440,6 @@ export function WaitlistOnboarding() {
                       })}
                     </div>
 
-                    <div ref={turnstileContainerRef} className="mt-4 flex justify-center sm:mt-5" />
-
-                    {turnstileError ? (
-                      <p className="mt-2 text-center text-sm text-red-600">
-                        Verification couldn&apos;t load (error {turnstileError}). Refresh and try again.
-                      </p>
-                    ) : null}
-
                     {submitError ? (
                       <p className="mt-3 text-sm text-red-600">{submitError}</p>
                     ) : null}
@@ -542,11 +468,19 @@ export function WaitlistOnboarding() {
                     </div>
 
                     <h2 className="mt-3 text-center text-[clamp(1.65rem,7vw,3.2rem)] font-extrabold tracking-[-0.03em] text-surface sm:mt-5">
-                      You&apos;re{" "}
-                      <span className="text-brand-gold">
-                        #{queuePosition.toLocaleString()}
-                      </span>{" "}
-                      on the list
+                      {queuePosition !== null ? (
+                        <>
+                          You&apos;re{" "}
+                          <span className="text-brand-gold">
+                            #{queuePosition.toLocaleString()}
+                          </span>{" "}
+                          on the list
+                        </>
+                      ) : alreadyJoined ? (
+                        <>You&apos;re already on the list</>
+                      ) : (
+                        <>You&apos;re on the list</>
+                      )}
                     </h2>
                     <p className="mx-auto mt-2 max-w-[46ch] text-center text-sm text-green-100/70 sm:mt-3 sm:text-lg">
                       {alreadyJoined ? (

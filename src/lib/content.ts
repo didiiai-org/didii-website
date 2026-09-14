@@ -231,7 +231,7 @@ export const finalCta = {
    * `/api/count` without touching the surrounding copy. `bodyFallback` is
    * what renders before that fetch resolves (and if it fails). */
   bodyPrefix: "Join more than ",
-  bodyFallback: 2900,
+  bodyFallback: 800,
   bodySuffix: " people registered before launch and be among the first to experience banking that gets to know you",
   cta: { label: "Join the waitlist", href: "#waitlist" },
   note: "Pre-launch in Nigeria. We'll let you know when early access opens",

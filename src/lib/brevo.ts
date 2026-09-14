@@ -3,6 +3,10 @@
  * storage is still `appendWaitlistRow` (Google Sheets, see `googleSheets.ts`);
  * this is a secondary, best-effort integration. */
 
+/** Added to the Brevo subscriber count everywhere the waitlist size or a
+ * queue position is shown (`/api/count`, `/api/waitlist`). */
+export const WAITLIST_BASELINE = 800;
+
 export type BrevoLead = {
   name: string;
   phone: string;
@@ -34,6 +38,31 @@ export async function addToBrevoList(lead: BrevoLead) {
   });
 
   return res.json().catch(() => null);
+}
+
+/** Whether `email` is already on the configured list. Returns null when
+ * Brevo isn't configured or the lookup fails, so the caller decides whether
+ * to fail open. */
+export async function isOnBrevoList(email: string): Promise<boolean | null> {
+  const apiKey = process.env.BREVO_API_KEY;
+  const listId = Number.parseInt(process.env.BREVO_LIST_ID ?? "", 10);
+  if (!apiKey || !listId) return null;
+
+  try {
+    const res = await fetch(`https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`, {
+      headers: {
+        accept: "application/json",
+        "api-key": apiKey,
+      },
+    });
+    if (res.status === 404) return false;
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return Array.isArray(data.listIds) && data.listIds.includes(listId);
+  } catch {
+    return null;
+  }
 }
 
 /** Live subscriber count for the configured list, net of blacklisted
