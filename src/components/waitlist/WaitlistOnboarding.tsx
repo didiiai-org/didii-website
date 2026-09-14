@@ -142,9 +142,9 @@ export function WaitlistOnboarding() {
     /* `open` is a dep so closing the modal on step 3 tears the widget down —
        otherwise its iframe is ripped out of the DOM mid-challenge. */
     if (!open || step !== 3) return;
-    const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    const siteKey = process.env.TURNSTILE_SITE_KEY;
     if (!siteKey) {
-      console.error("turnstile: NEXT_PUBLIC_TURNSTILE_SITE_KEY is not set (restart `next dev` after editing .env)");
+      console.error("turnstile: TURNSTILE_SITE_KEY is not set (restart `next dev` after editing .env)");
       return;
     }
     if (!turnstileReady || !window.turnstile || !turnstileContainerRef.current) return;
