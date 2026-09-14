@@ -85,9 +85,11 @@ they all land the visitor in one place:
    data & airtime, photo input, voice input) apply
 4. Confirmation — a queue position and a copy-to-share link
 
-Cloudflare Turnstile gates submission. A completed entry is cached in
-`localStorage` (`didii:waitlist`) so a returning visitor who reopens the modal
-lands straight on step 4 instead of re-submitting.
+Submissions are rate-limited per IP via Upstash (no bot check). A completed entry is cached in
+`localStorage` (`didii:waitlist:v2`) so a returning visitor who reopens the modal
+lands straight on step 4 instead of re-submitting. The server enforces one
+signup per email (checked against the Brevo list) and returns the queue
+position: 800 + Brevo subscribers, the same figure `/api/count` shows.
 
 ## File structure
 

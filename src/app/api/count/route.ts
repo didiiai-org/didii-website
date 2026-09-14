@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { getBrevoListCount } from "@/lib/brevo";
+import { getBrevoListCount, WAITLIST_BASELINE } from "@/lib/brevo";
 
-/** Floor for the displayed waitlist count — matches the "2,900+" figure the
- * marketing copy already shipped with (`finalCta.bodyFallback` in
- * `content.ts`), so wiring up the live Brevo count doesn't cause a visible
- * drop the moment this ships. Every Brevo subscriber adds to this floor. */
-const BASELINE = 800;
-
+/** Displayed waitlist size: baseline + Brevo subscribers. The same figure
+ * `/api/waitlist` uses for a new signup's queue position. */
 export async function GET() {
   const real = await getBrevoListCount();
-  const count = BASELINE + (real ?? 0);
+  const count = WAITLIST_BASELINE + (real ?? 0);
 
   return NextResponse.json(
     { count },
