@@ -57,26 +57,27 @@ export async function POST(request: NextRequest) {
   }
   if (existing === null) console.warn("waitlist: Brevo lookup unavailable, duplicate check skipped");
 
-  /* All three run in parallel; none blocks the response, and none can take
-     the whole submission down — a Sheets, Brevo, or Resend outage still
-     leaves the other two intact. */
+  /* Sheets is the lead of record, so it runs first. Brevo and the email only
+     follow a saved row — otherwise a Sheets failure would still add the
+     contact to Brevo, and the duplicate check above would then lock the
+     person out on retry with no row saved. */
+  try {
+    await appendWaitlistRow({ name, phone, email, source: "waitlist", timestamp: new Date().toISOString() });
+  } catch (err) {
+    console.error("waitlist: failed to append row", err);
+    return NextResponse.json({ error: "Could not save to waitlist." }, { status: 502 });
+  }
+
+  /* Neither blocks the response — a Brevo or Resend outage still leaves the
+     saved row and the other side-effect intact. */
   const results = await Promise.allSettled([
-    appendWaitlistRow({ name, phone, email, source: "waitlist", timestamp: new Date().toISOString() }),
     addToBrevoList({ name, phone, email, source: "waitlist" }),
     sendConfirmationEmail(name, email),
   ]);
 
-  const rowResult = results[0];
-  if (rowResult.status === "rejected") {
-    console.error("waitlist: failed to append row", rowResult.reason);
-    return NextResponse.json({ error: "Could not save to waitlist." }, { status: 502 });
-  }
-
   results.forEach((result, i) => {
-    if (i === 0) return;
-    const label = ["Sheets", "Brevo", "ConfirmEmail"][i];
     if (result.status === "rejected") {
-      console.error(`waitlist: ${label} failed`, result.reason);
+      console.error(`waitlist: ${["Brevo", "ConfirmEmail"][i]} failed`, result.reason);
     }
   });
 
