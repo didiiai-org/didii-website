@@ -145,7 +145,7 @@ export function WaitlistOnboarding() {
     const siteKey = process.env.TURNSTILE_SITE_KEY;
     if (!siteKey) {
       console.error("turnstile: TURNSTILE_SITE_KEY is not set (restart `next dev` after editing .env)");
-      return;
+      return; 
     }
     if (!turnstileReady || !window.turnstile || !turnstileContainerRef.current) return;
 
