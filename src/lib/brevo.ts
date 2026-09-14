@@ -71,7 +71,10 @@ export async function isOnBrevoList(email: string): Promise<boolean | null> {
 export async function getBrevoListCount(): Promise<number | null> {
   const apiKey = process.env.BREVO_API_KEY;
   const listId = Number.parseInt(process.env.BREVO_LIST_ID ?? "", 10);
-  if (!apiKey || !listId) return null;
+  if (!apiKey || !listId) {
+    console.warn("brevo: list count skipped — BREVO_API_KEY or BREVO_LIST_ID not set");
+    return null;
+  }
 
   try {
     const res = await fetch(`https://api.brevo.com/v3/contacts/lists/${listId}`, {
@@ -80,12 +83,16 @@ export async function getBrevoListCount(): Promise<number | null> {
         "api-key": apiKey,
       },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn("brevo: list count failed", res.status, await res.text().catch(() => ""));
+      return null;
+    }
 
     const data = await res.json();
     if (typeof data.totalSubscribers !== "number") return null;
     return Math.max(data.totalSubscribers - (data.totalBlacklisted || 0), 0);
-  } catch {
+  } catch (err) {
+    console.warn("brevo: list count errored", err);
     return null;
   }
 }
